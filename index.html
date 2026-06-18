@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Revo Hospital — Financial Health Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=DM+Serif+Display&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --teal:#1D9E75;--teal-l:#9FE1CB;--teal-bg:#E1F5EE;
+  --purple:#534AB7;--pur-bg:#EEEDFE;
+  --coral:#D85A30;--amber:#BA7517;--navy:#0D2137;
+  --g1:#F7F9FB;--g2:#EEF1F5;--g3:#C8D0DA;--gt:#5A6475;
+  --white:#FFFFFF;--text:#1A2233;--red:#E24B4A;
+}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--g1);color:var(--text);font-size:13px;line-height:1.5}
+
+/* TOPBAR */
+.topbar{background:var(--navy);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:52px;position:sticky;top:0;z-index:100}
+.brand{display:flex;align-items:center;gap:10px;color:white}
+.brand-dot{width:28px;height:28px;background:var(--teal);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:white}
+.brand-name{font-size:14px;font-weight:600}
+.brand-sub{font-size:11px;color:var(--teal-l);margin-top:-2px}
+.filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.filters label{font-size:11px;color:#8A9BB0}
+.filters select{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:white;padding:4px 8px;border-radius:6px;font-size:11px;font-family:inherit;cursor:pointer}
+.filters select option{background:var(--navy)}
+.live{background:var(--teal);color:white;font-size:11px;font-weight:500;padding:4px 10px;border-radius:20px}
+
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:200px 1fr;min-height:calc(100vh - 52px)}
+
+/* SIDEBAR */
+.sidebar{background:white;border-right:1px solid var(--g2);padding:16px 12px;overflow-y:auto}
+.sb-section{font-size:9px;font-weight:600;letter-spacing:.6px;color:var(--g3);text-transform:uppercase;margin:14px 0 6px}
+.sb-section:first-child{margin-top:0}
+.nav-item{display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:6px;cursor:pointer;font-size:12px;color:var(--gt);margin-bottom:1px;transition:background .15s}
+.nav-item:hover{background:var(--g1)}
+.nav-item.active{background:var(--teal-bg);color:var(--teal);font-weight:500}
+.nav-item svg{width:14px;height:14px;flex-shrink:0}
+.field-row{display:flex;align-items:center;gap:5px;padding:3px 5px;border-radius:3px;font-size:10px;color:var(--gt);cursor:default;margin-bottom:1px}
+.field-row:hover{background:var(--g1)}
+.fi{font-size:9px;width:13px;text-align:center}
+.fi.d{color:var(--purple)}.fi.m{color:var(--teal)}
+
+/* MAIN */
+.main{padding:18px 20px 32px;overflow-y:auto}
+.page-title{font-family:'DM Serif Display',serif;font-size:21px;font-weight:400;color:var(--navy);margin-bottom:2px}
+.page-sub{font-size:11px;color:var(--gt);margin-bottom:16px}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.kpi{background:white;border:1px solid var(--g2);border-radius:10px;padding:12px 14px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--teal)}
+.kpi.p::before{background:var(--purple)}.kpi.c::before{background:var(--coral)}.kpi.a::before{background:var(--amber)}
+.kpi-label{font-size:10px;color:var(--gt);margin-bottom:3px}
+.kpi-value{font-size:22px;font-weight:600;color:var(--navy);line-height:1.1}
+.kpi-sub{font-size:10px;color:var(--gt);margin-top:2px}
+.kpi-delta{font-size:10px;margin-top:3px;color:var(--teal)}
+
+/* CHARTS */
+.crow{display:grid;gap:12px;margin-bottom:12px}
+.crow.c1{grid-template-columns:1fr}
+.crow.c2{grid-template-columns:1fr 1fr}
+.crow.c3{grid-template-columns:2fr 1fr 1fr}
+.cc{background:white;border:1px solid var(--g2);border-radius:10px;padding:14px}
+.cc-title{font-size:12px;font-weight:600;color:var(--navy)}
+.cc-sub{font-size:10px;color:var(--gt);margin-top:1px;margin-bottom:10px}
+.cw{position:relative;width:100%}
+.leg{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+.leg-item{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--gt)}
+.leg-sq{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+
+/* INSIGHTS */
+.insight-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.ins-card{background:white;border:1px solid var(--g2);border-left:3px solid var(--teal);border-radius:0 8px 8px 0;padding:10px 12px}
+.ins-card.w{border-left-color:var(--amber)}.ins-card.i{border-left-color:var(--purple)}
+.ins-num{font-size:18px;font-weight:600;color:var(--navy)}
+.ins-desc{font-size:10px;color:var(--gt);margin-top:2px;line-height:1.4}
+
+.footer{text-align:center;font-size:10px;color:var(--g3);padding:16px;border-top:1px solid var(--g2);background:white}
+
+@media(max-width:900px){
+  .layout{grid-template-columns:1fr}.sidebar{display:none}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .crow.c2,.crow.c3{grid-template-columns:1fr}
+  .insight-strip{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-dot">R</div>
+    <div>
+      <div class="brand-name">Revo Hospital Group</div>
+      <div class="brand-sub">Financial Health Dashboard</div>
+    </div>
+  </div>
+  <div class="filters">
+    <label>Tahun</label>
+    <select id="fYear" onchange="redraw()">
+      <option value="all">2024 + 2025</option>
+      <option value="2024">2024</option>
+      <option value="2025">2025</option>
+    </select>
+    <label>Cabang</label>
+    <select id="fBranch" onchange="redraw()">
+      <option value="all">Semua cabang</option>
+      <option value="Jakarta Selatan">Jakarta Selatan</option>
+      <option value="Jakarta Pusat">Jakarta Pusat</option>
+      <option value="Surabaya">Surabaya</option>
+      <option value="Bandung">Bandung</option>
+      <option value="Semarang">Semarang</option>
+      <option value="Yogyakarta">Yogyakarta</option>
+      <option value="Malang">Malang</option>
+      <option value="Cirebon">Cirebon</option>
+    </select>
+    <label>Revenue</label>
+    <select id="fRev" onchange="redraw()">
+      <option value="gross">Gross Charge</option>
+      <option value="net">Net Revenue</option>
+    </select>
+    <div class="live">● Data Asli</div>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sb-section">Navigasi</div>
+    <div class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Overview
+    </div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Tren Revenue
+    </div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="6" height="18"/><rect x="9" y="8" width="6" height="13"/><rect x="16" y="13" width="6" height="8"/></svg>Perbandingan
+    </div>
+    <div class="sb-section">Dimensions</div>
+    <div class="field-row"><span class="fi d">Abc</span>branch_name</div>
+    <div class="field-row"><span class="fi d">Abc</span>doctor_name</div>
+    <div class="field-row"><span class="fi d">Abc</span>department_name</div>
+    <div class="field-row"><span class="fi d">Abc</span>insurance_type</div>
+    <div class="field-row"><span class="fi d">Abc</span>diagnosis_group</div>
+    <div class="field-row"><span class="fi d">📅</span>admission_date</div>
+    <div class="sb-section">Measures</div>
+    <div class="field-row"><span class="fi m">#</span>gross_charge_idr</div>
+    <div class="field-row"><span class="fi m">#</span>net_revenue_idr</div>
+    <div class="field-row"><span class="fi m">#</span>insurance_covered_idr</div>
+    <div class="field-row"><span class="fi m">#</span>out_of_pocket_idr</div>
+    <div class="field-row"><span class="fi m">#</span>discount_idr</div>
+    <div class="field-row"><span class="fi m">#</span>length_of_stay_days</div>
+    <div class="field-row"><span class="fi m">⊞</span>Insurance Ratio (LOD)</div>
+    <div class="field-row"><span class="fi m">⊞</span>Doctor Rev (FIXED)</div>
+  </aside>
+
+  <main class="main">
+    <h1 class="page-title">Financial Health Overview</h1>
+    <p class="page-sub" id="pageSub">Seluruh cabang · 2024–2025 · Gross Charge · Data: FSDA_DATVIZ.xlsx</p>
+
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="kpi-label">Total Revenue</div>
+        <div class="kpi-value" id="kv1">Rp 101,9B</div>
+        <div class="kpi-sub" id="ks1">gross_charge_idr · 5.000 admisi</div>
+        <div class="kpi-delta" id="kd1">▲ 5.000 admissions total</div>
+      </div>
+      <div class="kpi p">
+        <div class="kpi-label">Avg Insurance Ratio</div>
+        <div class="kpi-value" id="kv2">57,9%</div>
+        <div class="kpi-sub">insurance_covered / gross_charge</div>
+        <div class="kpi-delta" style="color:var(--purple)">▲ 42,1% out-of-pocket</div>
+      </div>
+      <div class="kpi c">
+        <div class="kpi-label">Avg Length of Stay</div>
+        <div class="kpi-value" id="kv3">4,5 hari</div>
+        <div class="kpi-sub">rata-rata per admission</div>
+        <div class="kpi-delta" style="color:var(--coral)">DATEDIFF discharge − admission</div>
+      </div>
+      <div class="kpi a">
+        <div class="kpi-label">Total Discount</div>
+        <div class="kpi-value" id="kv4">Rp 3,07B</div>
+        <div class="kpi-sub">gross − net revenue</div>
+        <div class="kpi-delta" style="color:var(--amber)">3,0% dari gross charge</div>
+      </div>
+    </div>
+
+    <!-- TREND -->
+    <div class="crow c1">
+      <div class="cc">
+        <div class="cc-title">Revenue bulanan & running total kumulatif</div>
+        <div class="cc-sub">Bar = gross charge per bulan · Garis putus-putus = running total · Filter tahun aktif</div>
+        <div class="cw" style="height:200px"><canvas id="cTrend"></canvas></div>
+        <div class="leg">
+          <span class="leg-item"><span class="leg-sq" style="background:#9FE1CB"></span>Revenue bulanan (2024)</span>
+          <span class="leg-item"><span class="leg-sq" style="background:#1D9E75"></span>Revenue bulanan (2025)</span>
+          <span class="leg-item"><span class="leg-sq" style="background:#534AB7"></span>Running total kumulatif</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- BRANCH + DOCTORS -->
+    <div class="crow c2">
+      <div class="cc">
+        <div class="cc-title">Revenue per cabang</div>
+        <div class="cc-sub">Horizontal bar · sort descending · 8 kota di Jawa</div>
+        <div class="cw" style="height:240px"><canvas id="cBranch"></canvas></div>
+      </div>
+      <div class="cc">
+        <div class="cc-title">Top 5 dokter by revenue</div>
+        <div class="cc-sub">LOD FIXED: { FIXED [doctor_name] : SUM([gross_charge_idr]) }</div>
+        <div class="cw" style="height:240px"><canvas id="cDocs"></canvas></div>
+      </div>
+    </div>
+
+    <!-- RATIO + HISTOGRAM + STACKED -->
+    <div class="crow c3">
+      <div class="cc">
+        <div class="cc-title">Insurance ratio per cabang</div>
+        <div class="cc-sub">insurance_covered / gross_charge · ref. line = avg 57,9%</div>
+        <div class="cw" style="height:190px"><canvas id="cRatio"></canvas></div>
+      </div>
+      <div class="cc">
+        <div class="cc-title">Distribusi out-of-pocket</div>
+        <div class="cc-sub">Bins Rp 5jt · 5.000 pasien</div>
+        <div class="cw" style="height:190px"><canvas id="cHist"></canvas></div>
+        <div class="leg">
+          <span class="leg-item"><span class="leg-sq" style="background:#1D9E75"></span>Terbanyak</span>
+          <span class="leg-item"><span class="leg-sq" style="background:#9FE1CB"></span>Lainnya</span>
+        </div>
+      </div>
+      <div class="cc">
+        <div class="cc-title">Asuransi × Departemen</div>
+        <div class="cc-sub">Stacked bar · 4 jenis payer</div>
+        <div class="cw" style="height:190px"><canvas id="cStack"></canvas></div>
+        <div class="leg">
+          <span class="leg-item"><span class="leg-sq" style="background:#1D9E75"></span>Government</span>
+          <span class="leg-item"><span class="leg-sq" style="background:#534AB7"></span>Private</span>
+          <span class="leg-item"><span class="leg-sq" style="background:#D85A30"></span>Employer</span>
+          <span class="leg-item"><span class="leg-sq" style="background:#BA7517"></span>Self-pay</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- INSIGHTS -->
+    <div class="insight-strip">
+      <div class="ins-card">
+        <div class="ins-num">Rp 20,4B</div>
+        <div class="ins-desc">Jakarta Selatan cabang terbesar (20% total revenue) — namun bukan Jakarta Pusat seperti dugaan awal</div>
+      </div>
+      <div class="ins-card w">
+        <div class="ins-num">Top 3 Oncology</div>
+        <div class="ins-desc">3 dari 5 dokter terbaik adalah spesialis Oncology — departemen dengan revenue tertinggi (Rp 23,6B)</div>
+      </div>
+      <div class="ins-card i">
+        <div class="ins-num">44,5% pasien</div>
+        <div class="ins-desc">Out-of-pocket di bawah Rp 5jt — segmen mayoritas yang perlu diperhatikan dalam desain produk asuransi</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<footer class="footer">
+  Revo Hospital Group · Financial Health Dashboard · Sumber data: FSDA_DATVIZ.xlsx · 5.000 admissions · 8 cabang · 2024–2025
+</footer>
+
+<script>
+Chart.defaults.font.family="'Inter',system-ui,sans-serif";
+Chart.defaults.font.size=11;
+Chart.defaults.color='#5A6475';
+
+var TEAL='#1D9E75',TEAL_L='#9FE1CB',PURPLE='#534AB7',CORAL='#D85A30',AMBER='#BA7517',GRAY='#C8D0DA';
+var GRID='rgba(0,0,0,0.05)';
+
+// ── REAL DATA FROM FSDA_DATVIZ.xlsx ──
+var D = {
+  monthly2024:[2056226000,1830346000,1584380000,2266040000,1983905000,2242805000,1552624000,2169718000,1916490000,1795628000,1822381000,1831818000],
+  monthly2025:[7100110000,6020754000,6632310000,6012176000,6687313000,6097104000,6548690000,6684149000,6869155000,6993139000,6083329000,7160119000],
+  branchLabels:['Jakarta Selatan','Jakarta Pusat','Surabaya','Bandung','Semarang','Yogyakarta','Malang','Cirebon'],
+  branchGross:[20407288000,17516042000,16838592000,12170170000,10541523000,8926649000,7902445000,7638000000],
+  branchNet:[19790564000,17002073000,16333720000,11812326000,10223853000,8642143000,7663005000,7398221000],
+  branchRatio:[57.0,58.9,55.6,58.3,58.8,59.5,57.7,59.5],
+  docNames:['dr.Salsa Santoso','dr.Salsa Firmansyah','dr.Dimas Siregar','dr.Anisa Wijaya','dr.Yuni Nugroho'],
+  docSpecs:['Oncology','Oncology','Oncology','Cardiology','Internal Medicine'],
+  docRevGross:[4426681000,4362284000,4332507000,3427278000,3122258000],
+  docRevNet:[4296472000,4229466000,4212784000,3317182000,3025085000],
+  oopLabels:['0–5jt','5–10jt','10–15jt','15–20jt','20–25jt','>25jt'],
+  oopCounts:[2226,1553,608,300,133,180],
+  deptLabels:['Cardiology','Emergency','Int. Medicine','Neurology','Obs & Gyn','Oncology','Orthopedics','Pediatrics'],
+  insGov:[6647871000,2875202000,6354621000,5087493000,3686003000,8561353000,4654820000,2925740000],
+  insPriv:[4136985000,1857905000,4142883000,3112282000,2090738000,6453594000,3270629000,1319246000],
+  insEmpl:[2962173000,1707677000,2884810000,2825286000,1777775000,6094474000,2628818000,1329822000],
+  insSelf:[1711535000,907515000,2096107000,1564209000,1326459000,2892672000,1327790000,726222000],
+};
+
+var charts={};
+var months=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+
+function fmt(v){
+  if(v>=1e12) return 'Rp '+(v/1e12).toFixed(1)+'T';
+  if(v>=1e9)  return 'Rp '+(v/1e9).toFixed(1)+'B';
+  if(v>=1e6)  return 'Rp '+(v/1e6).toFixed(0)+'jt';
+  return 'Rp '+v.toLocaleString();
+}
+
+function runTotal(arr){var s=0;return arr.map(function(v){s+=v;return Math.round(s);});}
+
+function getRevKey(){return document.getElementById('fRev').value;}
+function getYear(){return document.getElementById('fYear').value;}
+
+function buildTrend(){
+  var yr=getYear(), rk=getRevKey();
+  var datasets=[];
+  if(yr==='all'||yr==='2024'){
+    datasets.push({type:'bar',label:'2024',data:D.monthly2024,backgroundColor:TEAL_L,borderColor:TEAL,borderWidth:1,yAxisID:'y',order:3,borderRadius:2});
+  }
+  if(yr==='all'||yr==='2025'){
+    datasets.push({type:'bar',label:'2025',data:D.monthly2025,backgroundColor:TEAL,borderColor:'#0F6E56',borderWidth:1,yAxisID:'y',order:2,borderRadius:2});
+  }
+  var combined=(yr==='2024'?D.monthly2024:yr==='2025'?D.monthly2025:D.monthly2024.map(function(v,i){return v+D.monthly2025[i];}));
+  var rt=runTotal(combined);
+  datasets.push({type:'line',label:'Running total',data:rt,borderColor:PURPLE,borderWidth:2,pointRadius:0,tension:0.3,yAxisID:'y2',order:1,borderDash:[4,3]});
+  var ctx=document.getElementById('cTrend').getContext('2d');
+  if(charts.trend)charts.trend.destroy();
+  charts.trend=new Chart(ctx,{
+    data:{labels:months,datasets:datasets},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+fmt(c.parsed.y);}}}},
+      scales:{
+        x:{grid:{color:GRID},ticks:{color:'#5A6475',font:{size:10}}},
+        y:{grid:{color:GRID},ticks:{color:'#5A6475',callback:function(v){return fmt(v);}},position:'left'},
+        y2:{grid:{display:false},ticks:{color:PURPLE,callback:function(v){return fmt(v);}},position:'right'}
+      }}
+  });
+}
+
+function buildBranch(){
+  var rk=getRevKey();
+  var revs=rk==='net'?D.branchNet:D.branchGross;
+  var colors=revs.map(function(v,i){return i===0?TEAL:TEAL_L;});
+  var ctx=document.getElementById('cBranch').getContext('2d');
+  if(charts.branch)charts.branch.destroy();
+  charts.branch=new Chart(ctx,{
+    type:'bar',
+    data:{labels:D.branchLabels,datasets:[{label:'Revenue',data:revs,backgroundColor:colors,borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return fmt(c.parsed.x);}}}},
+      scales:{
+        x:{grid:{color:GRID},ticks:{color:'#5A6475',callback:function(v){return fmt(v);}}},
+        y:{grid:{display:false},ticks:{color:'#5A6475',font:{size:10}}}
+      }}
+  });
+}
+
+function buildDocs(){
+  var rk=getRevKey();
+  var revs=rk==='net'?D.docRevNet:D.docRevGross;
+  var colors=[TEAL,'#5DCAA5',TEAL_L,'#C0F0DF','#E1F5EE'];
+  var ctx=document.getElementById('cDocs').getContext('2d');
+  if(charts.docs)charts.docs.destroy();
+  charts.docs=new Chart(ctx,{
+    type:'bar',
+    data:{labels:D.docNames,datasets:[{label:'Revenue all-time',data:revs,backgroundColor:colors,borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return D.docSpecs[c.dataIndex]+' · '+fmt(c.parsed.x);}}}},
+      scales:{
+        x:{grid:{color:GRID},ticks:{color:'#5A6475',callback:function(v){return fmt(v);}}},
+        y:{grid:{display:false},ticks:{color:'#5A6475',font:{size:10}}}
+      }}
+  });
+}
+
+function buildRatio(){
+  var avg=57.9;
+  var colors=D.branchRatio.map(function(v){return v>=avg?TEAL:TEAL_L;});
+  var ctx=document.getElementById('cRatio').getContext('2d');
+  if(charts.ratio)charts.ratio.destroy();
+  charts.ratio=new Chart(ctx,{
+    data:{labels:D.branchLabels,datasets:[
+      {type:'bar',label:'Insurance ratio',data:D.branchRatio,backgroundColor:colors,borderRadius:3,order:2},
+      {type:'line',label:'Avg 57,9%',data:Array(8).fill(avg),borderColor:GRAY,borderWidth:1.5,borderDash:[5,3],pointRadius:0,order:1}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{mode:'index',callbacks:{label:function(c){return c.dataset.label+': '+c.parsed.y.toFixed(1)+'%';}}}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#5A6475',font:{size:9},maxRotation:35}},
+        y:{grid:{color:GRID},min:50,max:65,ticks:{color:'#5A6475',callback:function(v){return v+'%';}}}
+      }}
+  });
+}
+
+function buildHist(){
+  var maxI=D.oopCounts.indexOf(Math.max.apply(null,D.oopCounts));
+  var colors=D.oopCounts.map(function(v,i){return i===maxI?TEAL:TEAL_L;});
+  var ctx=document.getElementById('cHist').getContext('2d');
+  if(charts.hist)charts.hist.destroy();
+  charts.hist=new Chart(ctx,{
+    type:'bar',
+    data:{labels:D.oopLabels,datasets:[{label:'Pasien',data:D.oopCounts,backgroundColor:colors,borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.parsed.y.toLocaleString()+' pasien';}}}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#5A6475',font:{size:9}}},
+        y:{grid:{color:GRID},ticks:{color:'#5A6475'}}
+      }}
+  });
+}
+
+function buildStack(){
+  var ctx=document.getElementById('cStack').getContext('2d');
+  if(charts.stack)charts.stack.destroy();
+  charts.stack=new Chart(ctx,{
+    type:'bar',
+    data:{labels:D.deptLabels,datasets:[
+      {label:'Government',data:D.insGov,backgroundColor:TEAL,stack:'s'},
+      {label:'Private',data:D.insPriv,backgroundColor:PURPLE,stack:'s'},
+      {label:'Employer',data:D.insEmpl,backgroundColor:CORAL,stack:'s'},
+      {label:'Self-pay',data:D.insSelf,backgroundColor:AMBER,stack:'s'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{mode:'index',callbacks:{label:function(c){return c.dataset.label+': '+fmt(c.parsed.y);}}}},
+      scales:{
+        x:{stacked:true,grid:{display:false},ticks:{color:'#5A6475',font:{size:9},maxRotation:35}},
+        y:{stacked:true,grid:{color:GRID},ticks:{color:'#5A6475',callback:function(v){return fmt(v);}}}
+      }}
+  });
+}
+
+function updateKPI(){
+  var rk=getRevKey(), yr=getYear();
+  var gross=D.monthly2024.concat(D.monthly2025).reduce(function(a,b){return a+b;},0);
+  if(yr==='2024') gross=D.monthly2024.reduce(function(a,b){return a+b;},0);
+  if(yr==='2025') gross=D.monthly2025.reduce(function(a,b){return a+b;},0);
+  var netFactor=0.9698;
+  var totalRev=rk==='net'?Math.round(gross*netFactor):gross;
+  document.getElementById('kv1').textContent=fmt(totalRev);
+  document.getElementById('ks1').textContent=(rk==='gross'?'gross_charge_idr':'net_revenue_idr')+(yr==='all'?' · 2024–2025':' · '+yr);
+
+  var branch=document.getElementById('fBranch').value;
+  var branchTxt=branch==='all'?'Seluruh cabang':branch;
+  var yrTxt=yr==='all'?'2024–2025':yr;
+  var revTxt=rk==='gross'?'Gross Charge':'Net Revenue';
+  document.getElementById('pageSub').textContent=branchTxt+' · '+yrTxt+' · '+revTxt+' · Data: FSDA_DATVIZ.xlsx';
+}
+
+function redraw(){
+  updateKPI();
+  buildTrend();
+  buildBranch();
+  buildDocs();
+  buildRatio();
+  buildHist();
+  buildStack();
+}
+
+redraw();
+</script>
+</body>
+</html>
